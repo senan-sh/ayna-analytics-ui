@@ -13,12 +13,15 @@ import {
   Select,
   Typography,
   createTheme,
+  useMediaQuery,
 } from '@mui/material'
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined'
 import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined'
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded'
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded'
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded'
+import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded'
 import flagAz from 'flag-icons/flags/4x3/az.svg'
 import flagGb from 'flag-icons/flags/4x3/gb.svg'
 import flagRu from 'flag-icons/flags/4x3/ru.svg'
@@ -38,15 +41,22 @@ function NoSelectIcon() {
 }
 
 const LANGUAGE_OPTIONS: Array<{ value: LanguageCode; label: string; flagSrc: string }> = [
-  { value: 'az', label: 'Azerbaijani', flagSrc: flagAz },
+  { value: 'az', label: 'Azərbaycan dili', flagSrc: flagAz },
   { value: 'en', label: 'English', flagSrc: flagGb },
-  { value: 'ru', label: 'Russian', flagSrc: flagRu },
+  { value: 'ru', label: 'Русский', flagSrc: flagRu },
 ]
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>('demographics')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const isMobile = useMediaQuery('(max-width:900px)')
   const { language, setLanguage, t } = useLanguage()
+  const compactSidebar = sidebarCollapsed && !isMobile
+  const mobileSidebarHidden = sidebarCollapsed && isMobile
+
+  useEffect(() => {
+    setSidebarCollapsed(isMobile)
+  }, [isMobile])
 
   const pageTitles = useMemo<Record<PageKey, string>>(
     () => ({
@@ -78,16 +88,16 @@ export default function App() {
         },
         shape: { borderRadius: 12 },
         typography: {
-          fontFamily: 'Manrope, Segoe UI, Tahoma, sans-serif',
+          fontFamily: 'Noto Sans, Manrope, Segoe UI, Tahoma, sans-serif',
           fontSize: 16,
           h5: {
-            fontFamily: 'Space Grotesk, Manrope, sans-serif',
+            fontFamily: 'Space Grotesk, Noto Sans, Manrope, sans-serif',
             fontWeight: 700,
             letterSpacing: 0.2,
             fontSize: 'clamp(1.45rem, 1.15rem + 0.6vw, 1.85rem)',
           },
           h6: {
-            fontFamily: 'Space Grotesk, Manrope, sans-serif',
+            fontFamily: 'Space Grotesk, Noto Sans, Manrope, sans-serif',
             fontWeight: 700,
             letterSpacing: 0.15,
             fontSize: 'clamp(1.15rem, 1rem + 0.35vw, 1.35rem)',
@@ -101,7 +111,7 @@ export default function App() {
             lineHeight: 1.55,
           },
           subtitle1: {
-            fontFamily: 'Space Grotesk, Manrope, sans-serif',
+            fontFamily: 'Space Grotesk, Noto Sans, Manrope, sans-serif',
             fontSize: '1.05rem',
           },
           button: {
@@ -120,10 +130,19 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box className="app-shell">
-        <Box className={`layout-root ${sidebarCollapsed ? 'layout-root-collapsed' : ''}`}>
-          <Box component="aside" className={`sidebar-shell ${sidebarCollapsed ? 'sidebar-shell-collapsed' : ''}`}>
+        <Box className={`layout-root ${compactSidebar ? 'layout-root-collapsed' : ''}`}>
+          <Box
+            component="aside"
+            className={`sidebar-shell ${compactSidebar ? 'sidebar-shell-collapsed' : ''} ${mobileSidebarHidden ? 'sidebar-shell-mobile-collapsed' : ''}`}
+          >
             <Box className="sidebar-top-row">
-              <Typography />
+              {isMobile ? (
+                <Box className="sidebar-mobile-brand">
+                  <img src="/ayna-only-icon.svg" alt="AYNA" className="sidebar-mobile-logo" />
+                </Box>
+              ) : (
+                <Typography />
+              )}
               <Box
                 component="button"
                 type="button"
@@ -131,84 +150,97 @@ export default function App() {
                 onClick={() => setSidebarCollapsed((prev) => !prev)}
                 aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                {sidebarCollapsed ? <ChevronRightRoundedIcon fontSize="small" /> : <ChevronLeftRoundedIcon fontSize="small" />}
+                {isMobile ? (
+                  sidebarCollapsed ? <KeyboardArrowDownRoundedIcon fontSize="small" /> : <KeyboardArrowUpRoundedIcon fontSize="small" />
+                ) : sidebarCollapsed ? (
+                  <ChevronRightRoundedIcon fontSize="small" />
+                ) : (
+                  <ChevronLeftRoundedIcon fontSize="small" />
+                )}
               </Box>
             </Box>
 
-            <Box>
-              {sidebarCollapsed ? (
-                <Box className="sidebar-brand-icon-wrap">
-                  <img src="/ayna-only-icon.svg" alt="AYNA" className="sidebar-brand-icon" />
-                </Box>
-              ) : (
-                <Typography variant="h5" component="h1" className="brand-title">
-                  {t('appTitle')}
+            <Box className={`sidebar-content ${mobileSidebarHidden ? 'sidebar-content-mobile-hidden' : ''}`}>
+              <Box>
+                {compactSidebar ? (
+                  <Box className="sidebar-brand-icon-wrap">
+                    <img src="/ayna-only-icon.svg" alt="AYNA" className="sidebar-brand-icon" />
+                  </Box>
+                ) : (
+                  <Typography variant="h5" component="h1" className="brand-title">
+                    {t('appTitle')}
+                  </Typography>
+                )}
+                <Typography variant="body2" className={`brand-subtitle ${compactSidebar ? 'hidden-when-collapsed' : ''}`}>
+                  {t('appSubtitle')}
                 </Typography>
-              )}
-              <Typography variant="body2" className={`brand-subtitle ${sidebarCollapsed ? 'hidden-when-collapsed' : ''}`}>
-                {t('appSubtitle')}
-              </Typography>
-            </Box>
+              </Box>
 
-            <Select
-              size="small"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value as LanguageCode)}
-              className={`language-select ${sidebarCollapsed ? 'language-select-collapsed' : ''}`}
-              IconComponent={sidebarCollapsed ? NoSelectIcon : undefined}
-              renderValue={(value) => {
-                const selectedOption = LANGUAGE_OPTIONS.find((option) => option.value === value)
-                if (!selectedOption) {
-                  return value
-                }
+              <Select
+                size="small"
+                value={language}
+                onChange={(event) => setLanguage(event.target.value as LanguageCode)}
+                className={`language-select ${compactSidebar ? 'language-select-collapsed' : ''}`}
+                IconComponent={compactSidebar ? NoSelectIcon : undefined}
+                renderValue={(value) => {
+                  const selectedOption = LANGUAGE_OPTIONS.find((option) => option.value === value)
+                  if (!selectedOption) {
+                    return value
+                  }
 
-                if (sidebarCollapsed) {
-                  return <img src={selectedOption.flagSrc} alt="" className="language-flag" aria-hidden="true" />
-                }
+                  if (compactSidebar) {
+                    return <img src={selectedOption.flagSrc} alt="" className="language-flag" aria-hidden="true" />
+                  }
 
-                return (
-                  <Box className="language-select-value">
-                    <img src={selectedOption.flagSrc} alt="" className="language-flag" aria-hidden="true" />
-                    <span>{selectedOption.label}</span>
-                  </Box>
-                )
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    bgcolor: '#1b4db5',
-                    color: '#ffffff',
+                  return (
+                    <Box className="language-select-value">
+                      <img src={selectedOption.flagSrc} alt="" className="language-flag" aria-hidden="true" />
+                      <span>{selectedOption.label}</span>
+                    </Box>
+                  )
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      bgcolor: '#1b4db5',
+                      color: '#ffffff',
+                    },
                   },
-                },
-              }}
-            >
-              {LANGUAGE_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value} className={sidebarCollapsed ? 'language-menu-item-collapsed' : ''}>
-                  <Box className={`language-menu-option ${sidebarCollapsed ? 'language-menu-option-collapsed' : ''}`}>
-                    <img src={option.flagSrc} alt="" className="language-flag" aria-hidden="true" />
-                    {!sidebarCollapsed && <span>{option.label}</span>}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
+                }}
+              >
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value} className={compactSidebar ? 'language-menu-item-collapsed' : ''}>
+                    <Box className={`language-menu-option ${compactSidebar ? 'language-menu-option-collapsed' : ''}`}>
+                      <img src={option.flagSrc} alt="" className="language-flag" aria-hidden="true" />
+                      {!compactSidebar && <span>{option.label}</span>}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
 
-            <Divider className="sidebar-divider" />
+              <Divider className="sidebar-divider" />
 
-            <List className="sidebar-nav-list" disablePadding>
-              {navItems.map((item) => (
-                <ListItemButton
-                  key={item.key}
-                  selected={activePage === item.key}
-                  onClick={() => setActivePage(item.key)}
-                  className={`sidebar-nav-item ${sidebarCollapsed ? 'sidebar-nav-item-collapsed' : ''}`}
-                >
-                  <ListItemIcon className="sidebar-nav-icon">
-                    {item.icon}
-                  </ListItemIcon>
-                  {!sidebarCollapsed && <ListItemText primary={item.label} />}
-                </ListItemButton>
-              ))}
-            </List>
+              <List className="sidebar-nav-list" disablePadding>
+                {navItems.map((item) => (
+                  <ListItemButton
+                    key={item.key}
+                    selected={activePage === item.key}
+                    onClick={() => {
+                      setActivePage(item.key)
+                      if (isMobile) {
+                        setSidebarCollapsed(true)
+                      }
+                    }}
+                    className={`sidebar-nav-item ${compactSidebar ? 'sidebar-nav-item-collapsed' : ''}`}
+                  >
+                    <ListItemIcon className="sidebar-nav-icon">
+                      {item.icon}
+                    </ListItemIcon>
+                    {!compactSidebar && <ListItemText primary={item.label} />}
+                  </ListItemButton>
+                ))}
+              </List>
+            </Box>
           </Box>
 
           <Box className="content-shell">

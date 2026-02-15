@@ -39,6 +39,22 @@
   padding-inline: 10px;
 }
 
+.sidebar-content {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  max-height: 1000px;
+  opacity: 1;
+  transition: max-height 220ms ease, opacity 200ms ease;
+}
+
+.sidebar-content-mobile-hidden {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .content-shell {
   min-width: 0;
 }
@@ -52,6 +68,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.sidebar-mobile-brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sidebar-mobile-logo {
+  width: 28px;
+  height: 28px;
+  display: block;
 }
 
 .sidebar-label {
@@ -142,7 +169,7 @@
 }
 
 .brand-title {
-  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-family: 'Space Grotesk', 'Noto Sans', 'Manrope', sans-serif;
   letter-spacing: 0.4px;
   color: #ffffff;
 }
@@ -160,7 +187,7 @@
 }
 
 .brand-subtitle {
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Noto Sans', 'Manrope', sans-serif;
   opacity: 0.82;
   font-size: 0.98rem;
   color: #e7efff;
@@ -471,6 +498,10 @@
   flex: 1;
 }
 
+.live-map-panel .map-canvas {
+  touch-action: none;
+}
+
 .route-list-panel {
   width: 320px;
   position: sticky;
@@ -692,6 +723,10 @@
     box-shadow: 0 8px 20px rgba(17, 61, 158, 0.2);
   }
 
+  .sidebar-shell-mobile-collapsed {
+    gap: 0;
+  }
+
   .layout-root-collapsed {
     grid-template-columns: 1fr;
   }
@@ -699,6 +734,11 @@
   .map-canvas {
     height: 56vh;
     min-height: 340px;
+  }
+
+  .live-map-panel .map-canvas {
+    height: 60vh;
+    min-height: 360px;
   }
 
   .route-list-panel {

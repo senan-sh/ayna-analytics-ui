@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import * as L from 'leaflet'
-import { Alert, Box, Button, CircularProgress, FormControlLabel, Paper, Skeleton, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, FormControlLabel, Paper, Skeleton, Stack, Switch, TextField, Typography, useMediaQuery } from '@mui/material'
 import { MapContainer, Polyline, Popup, TileLayer, Tooltip } from 'react-leaflet'
 import { useLanguage } from '../i18n/useLanguage'
 import { loadAynaBusDetails, loadAynaBusList, type AynaBusDetails, type AynaBusSummary } from '../services/dataService'
@@ -11,6 +11,7 @@ const ROUTE_COLORS = ['#2970ff', '#155eef', '#2e90fa', '#175cd3', '#53b1fd', '#7
 
 export default function LiveRoutes() {
   const { t } = useLanguage()
+  const isMobile = useMediaQuery('(max-width:900px)')
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [busSearch, setBusSearch] = useState('')
   const [debouncedBusSearch, setDebouncedBusSearch] = useState('')
@@ -24,6 +25,12 @@ export default function LiveRoutes() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [sourceLabel, setSourceLabel] = useState('')
   const mapRef = useRef<L.Map | null>(null)
+
+  useEffect(() => {
+    if (isMobile) {
+      setAutoRefresh(false)
+    }
+  }, [isMobile])
 
   const loadBusList = useCallback(async () => {
     setLoadingList(true)
@@ -152,6 +159,19 @@ export default function LiveRoutes() {
     }
   }, [renderedRoutes])
 
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      map.invalidateSize()
+    }, 180)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [isMobile, selectedBusId, renderedRoutes.length])
+
   return (
     <Stack spacing={2.5}>
       <Paper className="page-panel" elevation={0}>
@@ -176,7 +196,14 @@ export default function LiveRoutes() {
 
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} className="live-routes-layout">
         <Paper className="map-panel live-map-panel" elevation={0}>
-          <MapContainer center={MAP_CENTER} zoom={11} scrollWheelZoom className="map-canvas" ref={mapRef}>
+          <MapContainer
+            center={MAP_CENTER}
+            zoom={11}
+            scrollWheelZoom={!isMobile}
+            zoomControl={!isMobile}
+            className="map-canvas"
+            ref={mapRef}
+          >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
