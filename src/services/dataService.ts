@@ -17,6 +17,11 @@ const BUS_DETAILS_CACHE_TTL_MS = 90 * 1000
 let busListCache: { data: AynaBusSummary[]; expiresAt: number } | null = null
 const busDetailsCache = new Map<number, { data: AynaBusDetails; expiresAt: number }>()
 
+export function clearAynaBusCaches(): void {
+  busListCache = null
+  busDetailsCache.clear()
+}
+
 export async function loadRegionsGeoJson(): Promise<RegionsGeoJson> {
   const response = await loadFirstAvailableJson([REGIONS_DATA_PATH, LEGACY_REGIONS_DATA_PATH])
 
@@ -129,10 +134,13 @@ export async function loadAynaBusList(apiBaseUrl?: string): Promise<{ buses: Ayn
 export async function loadAynaBusDetails(
   busId: number,
   apiBaseUrl?: string,
+  forceRefresh = false,
 ): Promise<AynaBusDetails> {
-  const cached = busDetailsCache.get(busId)
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data
+  if (!forceRefresh) {
+    const cached = busDetailsCache.get(busId)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data
+    }
   }
 
   for (const baseUrl of getApiBaseCandidates(apiBaseUrl)) {

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import * as L from 'leaflet'
-import { Alert, Box, Button, CircularProgress, FormControlLabel, Paper, Skeleton, Stack, Switch, TextField, Typography, useMediaQuery } from '@mui/material'
+import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
+import { Alert, Box, Button, CircularProgress, Paper, Popover, Skeleton, Stack, TextField, Typography, useMediaQuery } from '@mui/material'
 import { MapContainer, Polyline, Popup, TileLayer, Tooltip } from 'react-leaflet'
 import { useLanguage } from '../i18n/useLanguage'
-import { loadAynaBusDetails, loadAynaBusList, type AynaBusDetails, type AynaBusSummary } from '../services/dataService'
+import { clearAynaBusCaches, loadAynaBusDetails, loadAynaBusList, type AynaBusDetails, type AynaBusSummary } from '../services/dataService'
 import type { RouteGeometry } from '../types/data'
 
 const MAP_CENTER: [number, number] = [40.4093, 49.8671]
@@ -12,7 +13,9 @@ const ROUTE_COLORS = ['#2970ff', '#155eef', '#2e90fa', '#175cd3', '#53b1fd', '#7
 export default function LiveRoutes() {
   const { t } = useLanguage()
   const isMobile = useMediaQuery('(max-width:900px)')
-  const [autoRefresh, setAutoRefresh] = useState(true)
+  const isNarrowLayout = useMediaQuery('(max-width:1199px)')
+  const [refreshIntervalMs, setRefreshIntervalMs] = useState(60000)
+  const [apiOverlayAnchorEl, setApiOverlayAnchorEl] = useState<HTMLElement | null>(null)
   const [busSearch, setBusSearch] = useState('')
   const [debouncedBusSearch, setDebouncedBusSearch] = useState('')
   const [loadingList, setLoadingList] = useState(true)
@@ -25,10 +28,11 @@ export default function LiveRoutes() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [sourceLabel, setSourceLabel] = useState('')
   const mapRef = useRef<L.Map | null>(null)
+  const apiOverlayOpen = Boolean(apiOverlayAnchorEl)
 
   useEffect(() => {
     if (isMobile) {
-      setAutoRefresh(false)
+      setRefreshIntervalMs(0)
     }
   }, [isMobile])
 
@@ -48,10 +52,10 @@ export default function LiveRoutes() {
   }, [t])
 
   const loadSingleBus = useCallback(
-    async (busId: number) => {
+    async (busId: number, forceRefresh = false) => {
       setLoadingBus(true)
       try {
-        const busDetails = await loadAynaBusDetails(busId)
+        const busDetails = await loadAynaBusDetails(busId, undefined, forceRefresh)
         setSelectedBus(busDetails)
         setSourceLabel(busDetails.source === 'live-api' ? t('liveApi') : t('fallbackSource'))
         setError(busDetails.features.length === 0 ? t('noRouteGeometry') : null)
@@ -64,6 +68,14 @@ export default function LiveRoutes() {
     },
     [t],
   )
+
+  const handleManualRefresh = useCallback(async () => {
+    clearAynaBusCaches()
+    await loadBusList()
+    if (selectedBusId !== null) {
+      await loadSingleBus(selectedBusId)
+    }
+  }, [loadBusList, loadSingleBus, selectedBusId])
 
   useEffect(() => {
     void loadBusList()
@@ -100,16 +112,16 @@ export default function LiveRoutes() {
   }, [busSearch])
 
   useEffect(() => {
-    if (!autoRefresh || selectedBusId === null) {
+    if (refreshIntervalMs <= 0 || selectedBusId === null) {
       return
     }
 
     const interval = window.setInterval(() => {
-      void loadSingleBus(selectedBusId)
-    }, 45000)
+      void loadSingleBus(selectedBusId, true)
+    }, refreshIntervalMs)
 
     return () => window.clearInterval(interval)
-  }, [autoRefresh, selectedBusId, loadSingleBus])
+  }, [refreshIntervalMs, selectedBusId, loadSingleBus])
 
   const filteredBuses = useMemo(() => {
     const query = debouncedBusSearch.trim().toLowerCase()
@@ -118,6 +130,24 @@ export default function LiveRoutes() {
     }
     return buses.filter((bus) => bus.number.toLowerCase().includes(query))
   }, [buses, debouncedBusSearch])
+
+  const refreshLabel = useMemo(() => {
+    if (refreshIntervalMs <= 0) {
+      return t('refreshOff')
+    }
+
+    return `${Math.floor(refreshIntervalMs / 1000)}s`
+  }, [refreshIntervalMs, t])
+
+  const refreshOptions = useMemo(
+    () => [
+      { value: 0, label: t('refreshOff') },
+      { value: 30000, label: '30s' },
+      { value: 60000, label: '60s' },
+      { value: 120000, label: '120s' },
+    ],
+    [t],
+  )
 
   const renderedRoutes = useMemo(
     () =>
@@ -167,30 +197,57 @@ export default function LiveRoutes() {
 
     const timeoutId = window.setTimeout(() => {
       map.invalidateSize()
-    }, 180)
+    }, 220)
 
     return () => window.clearTimeout(timeoutId)
-  }, [isMobile, selectedBusId, renderedRoutes.length])
+  }, [isMobile, isNarrowLayout, selectedBusId, renderedRoutes.length])
 
   return (
     <Stack spacing={2.5}>
-      <Paper className="page-panel" elevation={0}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <Button variant="contained" onClick={() => void loadBusList()}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          size="small"
+          variant="outlined"
+          color="secondary"
+          startIcon={<TuneRoundedIcon fontSize="small" />}
+          onClick={(event) => setApiOverlayAnchorEl(event.currentTarget)}
+        >
+          API
+        </Button>
+      </Box>
+      <Popover
+        open={apiOverlayOpen}
+        anchorEl={apiOverlayAnchorEl}
+        onClose={() => setApiOverlayAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Box className="api-overlay-panel">
+          <Typography variant="subtitle2">{t('autoRefresh')}: {refreshLabel}</Typography>
+          <Box className="api-refresh-grid">
+            {refreshOptions.map((option) => (
+              <Button
+                key={option.value}
+                size="small"
+                variant={refreshIntervalMs === option.value ? 'contained' : 'outlined'}
+                className="api-refresh-chip"
+                onClick={() => setRefreshIntervalMs(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </Box>
+          <Button variant="contained" onClick={() => void handleManualRefresh()}>
             {t('refreshNow')}
           </Button>
-          <FormControlLabel
-            control={<Switch checked={autoRefresh} onChange={(_, checked) => setAutoRefresh(checked)} />}
-            label={t('autoRefresh')}
-          />
-        </Stack>
-        <Typography variant="body2" sx={{ mt: 1.5 }}>
-          {lastUpdated ? `${t('lastUpdated')}: ${lastUpdated.toLocaleTimeString()}` : t('noSuccessfulRefresh')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t('dataSource')}: {sourceLabel || t('liveApi')}
-        </Typography>
-      </Paper>
+          <Typography variant="body2">
+            {lastUpdated ? `${t('lastUpdated')}: ${lastUpdated.toLocaleTimeString()}` : t('noSuccessfulRefresh')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('dataSource')}: {sourceLabel || t('liveApi')}
+          </Typography>
+        </Box>
+      </Popover>
 
       {error && <Alert severity="warning">{error}</Alert>}
 

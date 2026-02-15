@@ -231,6 +231,13 @@ export default function BusAnalytics() {
               }}
               disableRowSelectionOnClick
               showToolbar
+              slotProps={{
+                toolbar: {
+                  printOptions: {
+                    disableToolbarButton: true,
+                  },
+                },
+              }}
             />
           </Box>
         </Paper>
