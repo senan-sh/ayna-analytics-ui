@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import '@fontsource/noto-sans/latin-ext-400.css'
 import '@fontsource/noto-sans/latin-ext-500.css'
 import '@fontsource/noto-sans/latin-ext-600.css'
@@ -24,6 +25,8 @@ import { LanguageProvider } from './i18n/LanguageContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <LanguageProvider>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </LanguageProvider>
 )

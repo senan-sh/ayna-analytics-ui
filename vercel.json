@@ -3,6 +3,10 @@
     {
       "source": "/ayna-api/:path*",
       "destination": "https://map-api.ayna.gov.az/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

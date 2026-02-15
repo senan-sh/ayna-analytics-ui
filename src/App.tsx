@@ -22,6 +22,7 @@ import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded'
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded'
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded'
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import flagAz from 'flag-icons/flags/4x3/az.svg'
 import flagGb from 'flag-icons/flags/4x3/gb.svg'
 import flagRu from 'flag-icons/flags/4x3/ru.svg'
@@ -35,6 +36,7 @@ const BusAnalyticsPage = lazy(() => import('./pages/BusAnalytics'))
 const LiveRoutesPage = lazy(() => import('./pages/LiveRoutes'))
 
 type PageKey = 'demographics' | 'analytics' | 'routes'
+const DEFAULT_ROUTE = '/demographics'
 
 function NoSelectIcon() {
   return null
@@ -47,9 +49,10 @@ const LANGUAGE_OPTIONS: Array<{ value: LanguageCode; label: string; flagSrc: str
 ]
 
 export default function App() {
-  const [activePage, setActivePage] = useState<PageKey>('demographics')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const isMobile = useMediaQuery('(max-width:900px)')
+  const location = useLocation()
+  const navigate = useNavigate()
   const { language, setLanguage, t } = useLanguage()
   const compactSidebar = sidebarCollapsed && !isMobile
   const mobileSidebarHidden = sidebarCollapsed && isMobile
@@ -67,15 +70,23 @@ export default function App() {
     [t],
   )
 
-  const navItems: Array<{ key: PageKey; label: string; icon: ReactNode }> = [
-    { key: 'demographics', label: t('tabDemographics'), icon: <MapOutlinedIcon fontSize="small" /> },
-    { key: 'analytics', label: t('tabAnalytics'), icon: <InsightsOutlinedIcon fontSize="small" /> },
-    { key: 'routes', label: t('tabRoutes'), icon: <AltRouteOutlinedIcon fontSize="small" /> },
-  ]
+  const navItems = useMemo<Array<{ key: PageKey; label: string; icon: ReactNode; path: string }>>(
+    () => [
+      { key: 'demographics', label: t('tabDemographics'), icon: <MapOutlinedIcon fontSize="small" />, path: '/demographics' },
+      { key: 'analytics', label: t('tabAnalytics'), icon: <InsightsOutlinedIcon fontSize="small" />, path: '/analytics' },
+      { key: 'routes', label: t('tabRoutes'), icon: <AltRouteOutlinedIcon fontSize="small" />, path: '/routes' },
+    ],
+    [t],
+  )
+
+  const activeItem = useMemo(
+    () => navItems.find((item) => item.path === location.pathname) ?? navItems[0],
+    [location.pathname, navItems],
+  )
 
   useEffect(() => {
-    document.title = `${t('appTitle')} - ${pageTitles[activePage]}`
-  }, [activePage, pageTitles, t])
+    document.title = `${t('appTitle')} - ${pageTitles[activeItem.key]}`
+  }, [activeItem.key, pageTitles, t])
 
   const theme = useMemo(
     () =>
@@ -224,9 +235,9 @@ export default function App() {
                 {navItems.map((item) => (
                   <ListItemButton
                     key={item.key}
-                    selected={activePage === item.key}
+                    selected={activeItem.path === item.path}
                     onClick={() => {
-                      setActivePage(item.key)
+                      navigate(item.path)
                       if (isMobile) {
                         setSidebarCollapsed(true)
                       }
@@ -246,7 +257,7 @@ export default function App() {
           <Box className="content-shell">
             <Container maxWidth="xl" className="page-container">
               <Typography variant="h6" component="h2" className="page-title">
-                {pageTitles[activePage]}
+                {pageTitles[activeItem.key]}
               </Typography>
               <Typography variant="body2" className="page-subtitle">
                 {t('pageSubtitle')}
@@ -256,10 +267,14 @@ export default function App() {
                   <AppLoader />
                 }
               >
-                <Box key={activePage} className="page-transition">
-                  {activePage === 'demographics' && <DemographicsPage />}
-                  {activePage === 'analytics' && <BusAnalyticsPage />}
-                  {activePage === 'routes' && <LiveRoutesPage />}
+                <Box key={location.pathname} className="page-transition">
+                  <Routes>
+                    <Route path="/" element={<Navigate to={DEFAULT_ROUTE} replace />} />
+                    <Route path="/demographics" element={<DemographicsPage />} />
+                    <Route path="/analytics" element={<BusAnalyticsPage />} />
+                    <Route path="/routes" element={<LiveRoutesPage />} />
+                    <Route path="*" element={<Navigate to={DEFAULT_ROUTE} replace />} />
+                  </Routes>
                 </Box>
               </Suspense>
             </Container>
