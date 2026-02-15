@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import * as L from 'leaflet'
 import { Alert, Box, Button, CircularProgress, FormControlLabel, Paper, Skeleton, Stack, Switch, TextField, Typography } from '@mui/material'
-import { MapContainer, Polyline, TileLayer, Tooltip } from 'react-leaflet'
+import { MapContainer, Polyline, Popup, TileLayer, Tooltip } from 'react-leaflet'
 import { useLanguage } from '../i18n/useLanguage'
 import { loadAynaBusDetails, loadAynaBusList, type AynaBusDetails, type AynaBusSummary } from '../services/dataService'
 import type { RouteGeometry } from '../types/data'
@@ -20,6 +20,7 @@ export default function LiveRoutes() {
   const [buses, setBuses] = useState<AynaBusSummary[]>([])
   const [selectedBusId, setSelectedBusId] = useState<number | null>(null)
   const [selectedBus, setSelectedBus] = useState<AynaBusDetails | null>(null)
+  const [activeRoutePopup, setActiveRoutePopup] = useState<{ label: string; position: [number, number] } | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [sourceLabel, setSourceLabel] = useState('')
   const mapRef = useRef<L.Map | null>(null)
@@ -27,7 +28,7 @@ export default function LiveRoutes() {
   const loadBusList = useCallback(async () => {
     setLoadingList(true)
     try {
-      const result = await loadAynaBusList('/ayna-api')
+      const result = await loadAynaBusList()
       setBuses(result.buses)
       setSourceLabel(result.source === 'live-api' ? t('liveApi') : t('fallbackSource'))
       setError(result.buses.length === 0 ? t('noRoutesFound') : null)
@@ -43,7 +44,7 @@ export default function LiveRoutes() {
     async (busId: number) => {
       setLoadingBus(true)
       try {
-        const busDetails = await loadAynaBusDetails(busId, '/ayna-api')
+        const busDetails = await loadAynaBusDetails(busId)
         setSelectedBus(busDetails)
         setSourceLabel(busDetails.source === 'live-api' ? t('liveApi') : t('fallbackSource'))
         setError(busDetails.features.length === 0 ? t('noRouteGeometry') : null)
@@ -79,6 +80,7 @@ export default function LiveRoutes() {
       return
     }
 
+    setActiveRoutePopup(null)
     void loadSingleBus(selectedBusId)
   }, [selectedBusId, loadSingleBus])
 
@@ -180,10 +182,32 @@ export default function LiveRoutes() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             {renderedRoutes.map((route) => (
-              <Polyline key={route.id} positions={route.positions} pathOptions={{ color: route.color, weight: 6, opacity: 0.9 }}>
-                <Tooltip>{`${selectedBus?.number ?? ''} - ${route.flowName}`}</Tooltip>
+              <Polyline
+                key={route.id}
+                positions={route.positions}
+                pathOptions={{ color: route.color, weight: 6, opacity: 0.9 }}
+                eventHandlers={{
+                  click: (event) => {
+                    setActiveRoutePopup({
+                      label: `${selectedBus?.number ?? ''} - ${route.flowName}`,
+                      position: [event.latlng.lat, event.latlng.lng],
+                    })
+                  },
+                }}
+              >
+                <Tooltip sticky>{`${selectedBus?.number ?? ''} - ${route.flowName}`}</Tooltip>
               </Polyline>
             ))}
+            {activeRoutePopup && (
+              <Popup
+                position={activeRoutePopup.position}
+                eventHandlers={{
+                  remove: () => setActiveRoutePopup(null),
+                }}
+              >
+                {activeRoutePopup.label}
+              </Popup>
+            )}
           </MapContainer>
           {(loadingList || loadingBus) && (
             <Box className="map-overlay-loading loading-overlay-rich">

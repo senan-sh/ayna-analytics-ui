@@ -38,7 +38,7 @@ export default function Demographics() {
         if (!active) {
           return
         }
-        setError('zone_attributes_synthetic .geojson not found at project root.')
+        setError('Regional GeoJSON file not found. Expected /public/data/zone_attributes_synthetic.geojson.')
       })
       .finally(() => {
         if (active) {
@@ -51,18 +51,68 @@ export default function Demographics() {
     }
   }, [])
 
+  const hasExplicitRegionLevels = useMemo(() => {
+    if (!regions) {
+      return false
+    }
+
+    return regions.features.some((feature) => getFeatureLevel(feature.properties) !== null)
+  }, [regions])
+
   const filteredFeatures = useMemo(() => {
     if (!regions) {
       return []
     }
 
-    return regions.features.filter((feature) => featureMatchesLevel(feature.properties, regionLevel))
-  }, [regions, regionLevel])
+    if (!hasExplicitRegionLevels) {
+      return regions.features
+    }
 
-  const metricValues = useMemo(
-    () => filteredFeatures.map((feature) => getMetricValue(feature.properties, metric)).filter((value) => value > 0),
-    [filteredFeatures, metric],
+    return regions.features.filter((feature) => featureMatchesLevel(feature.properties, regionLevel))
+  }, [regions, hasExplicitRegionLevels, regionLevel])
+
+  const groupedTotalsByLevel = useMemo(() => {
+    if (!regions || hasExplicitRegionLevels) {
+      return null
+    }
+
+    const totals = new Map<string, { population: number; jobs: number }>()
+    for (const feature of regions.features) {
+      const key = getHierarchyName(feature.properties, regionLevel)
+      const current = totals.get(key) ?? { population: 0, jobs: 0 }
+      current.population += getMetricValue(feature.properties, 'population')
+      current.jobs += getMetricValue(feature.properties, 'jobs')
+      totals.set(key, current)
+    }
+
+    return totals
+  }, [regions, hasExplicitRegionLevels, regionLevel])
+
+  const resolveDisplayMetricValue = useCallback(
+    (properties: Record<string, unknown>, selectedMetric: MetricKey): number => {
+      if (hasExplicitRegionLevels || !groupedTotalsByLevel) {
+        return getMetricValue(properties, selectedMetric)
+      }
+
+      const key = getHierarchyName(properties, regionLevel)
+      const totals = groupedTotalsByLevel.get(key)
+      if (!totals) {
+        return 0
+      }
+      return selectedMetric === 'population' ? totals.population : totals.jobs
+    },
+    [groupedTotalsByLevel, hasExplicitRegionLevels, regionLevel],
   )
+
+  const metricValues = useMemo(() => {
+    if (!hasExplicitRegionLevels && groupedTotalsByLevel) {
+      return [...groupedTotalsByLevel.values()]
+        .map((totals) => (metric === 'population' ? totals.population : totals.jobs))
+        .filter((value) => value > 0)
+    }
+
+    return filteredFeatures.map((feature) => resolveDisplayMetricValue(feature.properties, metric)).filter((value) => value > 0)
+  }, [filteredFeatures, groupedTotalsByLevel, hasExplicitRegionLevels, metric, resolveDisplayMetricValue])
 
   const colorScale = useMemo(() => {
     if (metricValues.length === 0) {
@@ -106,7 +156,7 @@ export default function Demographics() {
 
   const styleFeature = useCallback(
     (feature?: RegionFeature): PathOptions => {
-      const value = feature ? getMetricValue(feature.properties, metric) : 0
+      const value = feature ? resolveDisplayMetricValue(feature.properties, metric) : 0
       return {
         color: '#2557be',
         weight: 1,
@@ -114,16 +164,16 @@ export default function Demographics() {
         fillColor: colorScale ? colorScale(value) : '#dce7ff',
       }
     },
-    [colorScale, metric],
+    [colorScale, metric, resolveDisplayMetricValue],
   )
 
   const onEachFeature = useCallback(
     (feature: RegionFeature, layer: L.Layer) => {
       const properties = feature.properties
       const name = getRegionName(properties, regionLevel)
-      const value = getMetricValue(properties, metric)
-      const population = getMetricValue(properties, 'population')
-      const jobs = getMetricValue(properties, 'jobs')
+      const value = resolveDisplayMetricValue(properties, metric)
+      const population = resolveDisplayMetricValue(properties, 'population')
+      const jobs = resolveDisplayMetricValue(properties, 'jobs')
       const micro = getHierarchyName(properties, 'micro')
       const meso = getHierarchyName(properties, 'meso')
       const macro = getHierarchyName(properties, 'macro')
@@ -133,7 +183,7 @@ export default function Demographics() {
         `<div class="map-popup"><div class="map-popup-title">${escapeHtml(name)}</div><div class="map-popup-grid"><div class="map-popup-row"><span>${escapeHtml(t('micro'))}</span><strong>${escapeHtml(micro)}</strong></div><div class="map-popup-row"><span>${escapeHtml(t('meso'))}</span><strong>${escapeHtml(meso)}</strong></div><div class="map-popup-row"><span>${escapeHtml(t('macro'))}</span><strong>${escapeHtml(macro)}</strong></div><div class="map-popup-row"><span>${escapeHtml(t('population'))}</span><strong>${population.toLocaleString()}</strong></div><div class="map-popup-row"><span>${escapeHtml(t('jobs'))}</span><strong>${jobs.toLocaleString()}</strong></div></div></div>`,
       )
     },
-    [metric, regionLevel, t],
+    [metric, regionLevel, resolveDisplayMetricValue, t],
   )
 
   useEffect(() => {
@@ -270,18 +320,38 @@ function getRegionName(properties: Record<string, unknown>, level: RegionLevel):
 }
 
 function featureMatchesLevel(properties: Record<string, unknown>, selectedLevel: RegionLevel): boolean {
-  const candidates = ['level', 'region_level', 'zone_level', 'category']
+  const level = getFeatureLevel(properties)
+  if (!level) {
+    return true
+  }
+
+  return level === selectedLevel
+}
+
+function getFeatureLevel(properties: Record<string, unknown>): RegionLevel | null {
+  const candidates = ['level', 'region_level', 'zone_level', 'category', 'LEVEL', 'REGION_LEVEL', 'ZONE_LEVEL', 'CATEGORY']
   for (const key of candidates) {
     const value = properties[key]
     if (typeof value === 'string') {
       const lower = value.toLowerCase()
       if (lower === 'micro' || lower === 'meso' || lower === 'macro') {
-        return lower === selectedLevel
+        return lower
+      }
+    }
+    if (typeof value === 'number') {
+      if (value === 1) {
+        return 'micro'
+      }
+      if (value === 2) {
+        return 'meso'
+      }
+      if (value === 3) {
+        return 'macro'
       }
     }
   }
 
-  return true
+  return null
 }
 
 function getMetricValue(properties: Record<string, unknown>, metric: MetricKey): number {

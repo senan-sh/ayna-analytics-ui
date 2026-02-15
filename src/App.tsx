@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   Box,
   Container,
@@ -14,6 +14,14 @@ import {
   Typography,
   createTheme,
 } from '@mui/material'
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined'
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined'
+import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined'
+import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded'
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded'
+import flagAz from 'flag-icons/flags/4x3/az.svg'
+import flagGb from 'flag-icons/flags/4x3/gb.svg'
+import flagRu from 'flag-icons/flags/4x3/ru.svg'
 import './App.css'
 import AppLoader from './components/AppLoader'
 import { useLanguage } from './i18n/useLanguage'
@@ -29,22 +37,35 @@ function NoSelectIcon() {
   return null
 }
 
+const LANGUAGE_OPTIONS: Array<{ value: LanguageCode; label: string; flagSrc: string }> = [
+  { value: 'az', label: 'Azerbaijani', flagSrc: flagAz },
+  { value: 'en', label: 'English', flagSrc: flagGb },
+  { value: 'ru', label: 'Russian', flagSrc: flagRu },
+]
+
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>('demographics')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { language, setLanguage, t } = useLanguage()
 
-  const pageTitles: Record<PageKey, string> = {
-    demographics: t('pageDemographics'),
-    analytics: t('pageAnalytics'),
-    routes: t('pageRoutes'),
-  }
+  const pageTitles = useMemo<Record<PageKey, string>>(
+    () => ({
+      demographics: t('pageDemographics'),
+      analytics: t('pageAnalytics'),
+      routes: t('pageRoutes'),
+    }),
+    [t],
+  )
 
-  const navItems: Array<{ key: PageKey; label: string; icon: string }> = [
-    { key: 'demographics', label: t('tabDemographics'), icon: '🗺️' },
-    { key: 'analytics', label: t('tabAnalytics'), icon: '📊' },
-    { key: 'routes', label: t('tabRoutes'), icon: '🛣️' },
+  const navItems: Array<{ key: PageKey; label: string; icon: ReactNode }> = [
+    { key: 'demographics', label: t('tabDemographics'), icon: <MapOutlinedIcon fontSize="small" /> },
+    { key: 'analytics', label: t('tabAnalytics'), icon: <InsightsOutlinedIcon fontSize="small" /> },
+    { key: 'routes', label: t('tabRoutes'), icon: <AltRouteOutlinedIcon fontSize="small" /> },
   ]
+
+  useEffect(() => {
+    document.title = `${t('appTitle')} - ${pageTitles[activePage]}`
+  }, [activePage, pageTitles, t])
 
   const theme = useMemo(
     () =>
@@ -108,8 +129,9 @@ export default function App() {
                 type="button"
                 className="sidebar-toggle-btn"
                 onClick={() => setSidebarCollapsed((prev) => !prev)}
+                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                {sidebarCollapsed ? '»' : '«'}
+                {sidebarCollapsed ? <ChevronRightRoundedIcon fontSize="small" /> : <ChevronLeftRoundedIcon fontSize="small" />}
               </Box>
             </Box>
 
@@ -134,6 +156,23 @@ export default function App() {
               onChange={(event) => setLanguage(event.target.value as LanguageCode)}
               className={`language-select ${sidebarCollapsed ? 'language-select-collapsed' : ''}`}
               IconComponent={sidebarCollapsed ? NoSelectIcon : undefined}
+              renderValue={(value) => {
+                const selectedOption = LANGUAGE_OPTIONS.find((option) => option.value === value)
+                if (!selectedOption) {
+                  return value
+                }
+
+                if (sidebarCollapsed) {
+                  return <img src={selectedOption.flagSrc} alt="" className="language-flag" aria-hidden="true" />
+                }
+
+                return (
+                  <Box className="language-select-value">
+                    <img src={selectedOption.flagSrc} alt="" className="language-flag" aria-hidden="true" />
+                    <span>{selectedOption.label}</span>
+                  </Box>
+                )
+              }}
               MenuProps={{
                 PaperProps: {
                   sx: {
@@ -143,15 +182,14 @@ export default function App() {
                 },
               }}
             >
-              <MenuItem value="az" className={sidebarCollapsed ? 'language-menu-item-collapsed' : ''}>
-                {sidebarCollapsed ? '🇦🇿' : '🇦🇿 Azerbaijani'}
-              </MenuItem>
-              <MenuItem value="en" className={sidebarCollapsed ? 'language-menu-item-collapsed' : ''}>
-                {sidebarCollapsed ? '🇬🇧' : '🇬🇧 English'}
-              </MenuItem>
-              <MenuItem value="ru" className={sidebarCollapsed ? 'language-menu-item-collapsed' : ''}>
-                {sidebarCollapsed ? '🇷🇺' : '🇷🇺 Russian'}
-              </MenuItem>
+              {LANGUAGE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value} className={sidebarCollapsed ? 'language-menu-item-collapsed' : ''}>
+                  <Box className={`language-menu-option ${sidebarCollapsed ? 'language-menu-option-collapsed' : ''}`}>
+                    <img src={option.flagSrc} alt="" className="language-flag" aria-hidden="true" />
+                    {!sidebarCollapsed && <span>{option.label}</span>}
+                  </Box>
+                </MenuItem>
+              ))}
             </Select>
 
             <Divider className="sidebar-divider" />
@@ -165,7 +203,7 @@ export default function App() {
                   className={`sidebar-nav-item ${sidebarCollapsed ? 'sidebar-nav-item-collapsed' : ''}`}
                 >
                   <ListItemIcon className="sidebar-nav-icon">
-                    <span>{item.icon}</span>
+                    {item.icon}
                   </ListItemIcon>
                   {!sidebarCollapsed && <ListItemText primary={item.label} />}
                 </ListItemButton>

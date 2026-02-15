@@ -56,7 +56,7 @@ export default function BusAnalytics() {
         if (!active) {
           return
         }
-        setError('ceck_in_buss.csv not found at project root.')
+        setError('CSV file not found. Expected /public/data/ceck_in_buss.csv.')
       })
       .finally(() => {
         if (active) {

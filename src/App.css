@@ -62,11 +62,18 @@
 .sidebar-toggle-btn {
   width: 28px;
   height: 28px;
+  padding: 0;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
+  display: grid;
+  place-items: center;
   cursor: pointer;
+}
+
+.sidebar-toggle-btn .MuiSvgIcon-root {
+  font-size: 1.02rem;
 }
 
 .sidebar-nav-list {
@@ -118,9 +125,8 @@
   place-items: center;
 }
 
-.sidebar-nav-icon span {
-  font-size: 1.05rem;
-  line-height: 1;
+.sidebar-nav-icon .MuiSvgIcon-root {
+  font-size: 1.12rem;
 }
 
 .sidebar-nav-item-collapsed {
@@ -165,6 +171,32 @@
   background: rgba(255, 255, 255, 0.14);
   border-radius: 8px;
   color: #ffffff;
+}
+
+.language-select-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.language-menu-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.language-menu-option-collapsed {
+  justify-content: center;
+  width: 100%;
+}
+
+.language-flag {
+  width: 18px;
+  height: 13px;
+  display: block;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 .language-select-collapsed {

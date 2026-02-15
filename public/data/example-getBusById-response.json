@@ -1,0 +1,141 @@
+{
+    "id": 79,
+    "carrier": "Transkontrol MMC",
+    "number": "113",
+    "firstPoint": "Q.Qarayev pr. kənar hərəkət hiss. ",
+    "lastPoint": "Əmircan qəs.",
+    "routLength": 24.30,
+    "paymentTypeId": 1,
+    "cardPaymentDate": "2021-05-23T20:00:00Z",
+    "tariff": 50,
+    "regionId": 1,
+    "workingZoneTypeId": 3,
+    "paymentType": {
+        "id": 1,
+        "name": "Kart",
+        "description": null,
+        "isActive": true,
+        "deactivedDate": null,
+        "priority": 1
+    },
+    "region": {
+        "id": 1,
+        "name": "Bakı",
+        "description": null,
+        "isActive": true,
+        "deactivedDate": null,
+        "priority": 1
+    },
+    "workingZoneType": {
+        "id": 3,
+        "name": "Şəhərətrafı",
+        "description": null,
+        "isActive": true,
+        "deactivedDate": null,
+        "priority": 3
+    },
+    "stops": [
+        {
+            "id": 939,
+            "stopCode": "1001661",
+            "stopName": "Q.Qarayev pr. 85",
+            "totalDistance": 24.3,
+            "intermediateDistance": 0.0,
+            "directionTypeId": 1,
+            "busId": 79,
+            "stopId": 1755,
+            "stop": {
+                "id": 1755,
+                "code": "1001661",
+                "name": "Q.Qarayev pr. 85",
+                "nameMonitor": "Q.Qarayev pr. 85",
+                "utmCoordX": "0",
+                "utmCoordY": "0",
+                "longitude": "49.931143",
+                "latitude": "40.418458",
+                "isTransportHub": false
+            }
+        },
+        {
+            "id": 940,
+            "stopCode": "1002433",
+            "stopName": "Nizami r. Enerji Satışı və Təchizatı İdarəsi",
+            "totalDistance": 24.3,
+            "intermediateDistance": 0.0,
+            "directionTypeId": 1,
+            "busId": 79,
+            "stopId": 2346,
+            "stop": {
+                "id": 2346,
+                "code": "1002433",
+                "name": "Nizami r. Enerji Satışı və Təchizatı İdarəsi",
+                "nameMonitor": "Nizami r. Enerji Satışı və Təchizatı İdarəsi",
+                "utmCoordX": "0",
+                "utmCoordY": "0",
+                "longitude": "49.937979",
+                "latitude": "40.420159",
+                "isTransportHub": false
+            }
+        }
+    ],
+    "routes": [
+        {
+            "id": 41,
+            "code": "113",
+            "customerName": "113",
+            "type": "113",
+            "name": "0",
+            "destination": "Q.Qarayev pr. 85 - Əmircan qəbiristanlığı",
+            "variant": "1",
+            "operator": "113",
+            "busId": 79,
+            "directionTypeId": 1,
+            "flowCoordinates": [
+                {
+                    "lat": 40.4183899999997,
+                    "lng": 49.93111999999986
+                }
+            ]
+        },
+        {
+            "id": 42,
+            "code": "113",
+            "customerName": "113",
+            "type": "113",
+            "name": "0",
+            "destination": "Əmircan qəbiristanlığı - Q.Qarayev pr. 85",
+            "variant": "1",
+            "operator": "113",
+            "busId": 79,
+            "directionTypeId": 2,
+            "flowCoordinates": [
+                {
+                    "lat": 40.42135138423994,
+                    "lng": 49.93219761901843
+                },
+                {
+                    "lat": 40.41978936052339,
+                    "lng": 49.931598492698924
+                },
+                {
+                    "lat": 40.419680000000064,
+                    "lng": 49.932289999999774
+                },
+                {
+                    "lat": 40.418880000000236,
+                    "lng": 49.93198000000014
+                },
+                {
+                    "lat": 40.4182499999999,
+                    "lng": 49.93173000000009
+                },
+                {
+                    "lat": 40.4183899999997,
+                    "lng": 49.93111999999986
+                }
+            ]
+        }
+    ],
+    "tariffStr": "0.50 AZN",
+    "durationMinuts": 40
+}

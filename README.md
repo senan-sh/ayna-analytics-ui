@@ -31,7 +31,7 @@ The application is implemented as a frontend-focused solution using React + Type
 
 Data source:
 
-* zone_attributes_synthetic.gpkg (converted to GeoJSON)
+* zone_attributes_synthetic.gpkg (converted to GeoJSON as `public/data/zone_attributes_synthetic.geojson`)
 
 ---
 
@@ -45,7 +45,7 @@ Data source:
 
 Data source:
 
-* ceck_in_buss.csv
+* `public/data/ceck_in_buss.csv`
 
 ---
 
@@ -59,7 +59,8 @@ Data source:
 
 Data source:
 
-* [https://map.ayna.gov.az](https://map.ayna.gov.az) (API access preferred)
+* [https://map.ayna.gov.az](https://map.ayna.gov.az) / `https://map-api.ayna.gov.az`
+* Local fallback snapshots in `public/data/getBusList.json` and `public/data/example-getBusById-response.json`
 
 ---
 
@@ -69,8 +70,10 @@ Data source:
 ayna-ui/
  ├─ public/
  │   └─ data/
- │       ├─ regions.geojson
- │       └─ ceck_in_buss.csv
+ │       ├─ zone_attributes_synthetic.geojson
+ │       ├─ ceck_in_buss.csv
+ │       ├─ getBusList.json
+ │       └─ example-getBusById-response.json
  ├─ src/
  │   ├─ pages/
  │   │   ├─ Demographics.tsx
@@ -122,7 +125,7 @@ ogr2ogr -f GeoJSON regions.geojson zone_attributes_synthetic.gpkg
 Place the generated file inside:
 
 ```
-/public/data/
+/public/data/zone_attributes_synthetic.geojson
 ```
 
 ## CSV
@@ -130,7 +133,7 @@ Place the generated file inside:
 Place `ceck_in_buss.csv` inside:
 
 ```
-/public/data/
+/public/data/ceck_in_buss.csv
 ```
 
 ---
@@ -150,6 +153,18 @@ Output directory:
 ```
 
 Deploy using any static hosting platform such as Vercel or Netlify.
+
+### Vercel (recommended)
+
+This project includes `vercel.json` rewrite rules so `/ayna-api/*` is proxied to `https://map-api.ayna.gov.az/*`.
+That keeps live route requests working from static hosting without adding a custom backend.
+
+Deploy options:
+
+```bash
+npm i -g vercel
+vercel --prod
+```
 
 After deployment, share the hosted link as required.
 

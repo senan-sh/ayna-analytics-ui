@@ -3,12 +3,13 @@ import * as Papa from 'papaparse'
 import type { Position } from 'geojson'
 import type { CsvRecord, GenericProperties, RegionsGeoJson, RouteFeature, RouteGeometry } from '../types/data'
 
-const REGIONS_DATA_PATH = '/zone_attributes_synthetic%20.geojson'
-const BUS_CSV_PATH = '/ceck_in_buss.csv'
+const REGIONS_DATA_PATH = '/data/zone_attributes_synthetic.geojson'
+const LEGACY_REGIONS_DATA_PATH = '/zone_attributes_synthetic%20.geojson'
+const BUS_CSV_PATH = '/data/ceck_in_buss.csv'
 const DEFAULT_ROUTES_ENDPOINT = 'https://map.ayna.gov.az/api/routes'
 const DEFAULT_AYNA_API_BASE = 'https://map-api.ayna.gov.az'
-const BUS_LIST_SNAPSHOT_PATH = '/getBusList.json'
-const BUS_BY_ID_SNAPSHOT_PATH = '/example-getBusById-response.json'
+const BUS_LIST_SNAPSHOT_PATH = '/data/getBusList.json'
+const BUS_BY_ID_SNAPSHOT_PATH = '/data/example-getBusById-response.json'
 const REQUEST_TIMEOUT_MS = 12000
 const BUS_LIST_CACHE_TTL_MS = 5 * 60 * 1000
 const BUS_DETAILS_CACHE_TTL_MS = 90 * 1000
@@ -17,10 +18,7 @@ let busListCache: { data: AynaBusSummary[]; expiresAt: number } | null = null
 const busDetailsCache = new Map<number, { data: AynaBusDetails; expiresAt: number }>()
 
 export async function loadRegionsGeoJson(): Promise<RegionsGeoJson> {
-  const response = await fetch(REGIONS_DATA_PATH)
-  if (!response.ok) {
-    throw new Error(`Could not load ${REGIONS_DATA_PATH}.`)
-  }
+  const response = await loadFirstAvailableJson([REGIONS_DATA_PATH, LEGACY_REGIONS_DATA_PATH])
 
   const payload = (await response.json()) as RegionsGeoJson
   if (!payload.features || payload.type !== 'FeatureCollection') {
@@ -28,6 +26,17 @@ export async function loadRegionsGeoJson(): Promise<RegionsGeoJson> {
   }
 
   return payload
+}
+
+async function loadFirstAvailableJson(paths: string[]): Promise<Response> {
+  for (const path of paths) {
+    const response = await fetch(path)
+    if (response.ok) {
+      return response
+    }
+  }
+
+  throw new Error(`Could not load any JSON resource from: ${paths.join(', ')}`)
 }
 
 export async function loadBusCsv(): Promise<CsvRecord[]> {
@@ -77,7 +86,7 @@ export type AynaBusDetails = {
   source: 'live-api' | 'snapshot-fallback'
 }
 
-export async function loadAynaBusList(apiBaseUrl = DEFAULT_AYNA_API_BASE): Promise<{ buses: AynaBusSummary[]; source: 'live-api' | 'snapshot-fallback' }> {
+export async function loadAynaBusList(apiBaseUrl?: string): Promise<{ buses: AynaBusSummary[]; source: 'live-api' | 'snapshot-fallback' }> {
   if (busListCache && busListCache.expiresAt > Date.now()) {
     return {
       buses: busListCache.data,
@@ -85,92 +94,101 @@ export async function loadAynaBusList(apiBaseUrl = DEFAULT_AYNA_API_BASE): Promi
     }
   }
 
-  const sanitizedBase = sanitizeBaseUrl(apiBaseUrl)
+  for (const baseUrl of getApiBaseCandidates(apiBaseUrl)) {
+    const sanitizedBase = sanitizeBaseUrl(baseUrl)
+    try {
+      const list = await getBusList(sanitizedBase)
+      const buses = list
+        .filter((item) => typeof item.id === 'number' && Number.isFinite(item.id))
+        .map((item) => ({
+          id: item.id,
+          number: typeof item.number === 'string' && item.number.trim().length > 0 ? item.number : String(item.id),
+        }))
 
-  try {
-    const list = await getBusList(sanitizedBase)
-    const buses = list
-      .filter((item) => typeof item.id === 'number' && Number.isFinite(item.id))
-      .map((item) => ({
-        id: item.id,
-        number: typeof item.number === 'string' && item.number.trim().length > 0 ? item.number : String(item.id),
-      }))
+      busListCache = {
+        data: buses,
+        expiresAt: Date.now() + BUS_LIST_CACHE_TTL_MS,
+      }
 
-    busListCache = {
-      data: buses,
-      expiresAt: Date.now() + BUS_LIST_CACHE_TTL_MS,
+      return {
+        buses,
+        source: 'live-api',
+      }
+    } catch {
+      continue
     }
+  }
 
-    return {
-      buses,
-      source: 'live-api',
-    }
-  } catch {
-    const snapshot = await loadBusListSnapshot()
-    return {
-      buses: snapshot,
-      source: 'snapshot-fallback',
-    }
+  const snapshot = await loadBusListSnapshot()
+  return {
+    buses: snapshot,
+    source: 'snapshot-fallback',
   }
 }
 
 export async function loadAynaBusDetails(
   busId: number,
-  apiBaseUrl = DEFAULT_AYNA_API_BASE,
+  apiBaseUrl?: string,
 ): Promise<AynaBusDetails> {
   const cached = busDetailsCache.get(busId)
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data
   }
 
-  const sanitizedBase = sanitizeBaseUrl(apiBaseUrl)
-
-  try {
-    const bus = await getBusById(sanitizedBase, busId)
-    const mapped = mapBusDetails(bus, 'live-api')
-    busDetailsCache.set(busId, { data: mapped, expiresAt: Date.now() + BUS_DETAILS_CACHE_TTL_MS })
-    return mapped
-  } catch {
-    const fallbackBus = await loadBusByIdSnapshot(busId)
-    const mapped = mapBusDetails(fallbackBus, 'snapshot-fallback')
-    busDetailsCache.set(busId, { data: mapped, expiresAt: Date.now() + BUS_DETAILS_CACHE_TTL_MS })
-    return mapped
+  for (const baseUrl of getApiBaseCandidates(apiBaseUrl)) {
+    const sanitizedBase = sanitizeBaseUrl(baseUrl)
+    try {
+      const bus = await getBusById(sanitizedBase, busId)
+      const mapped = mapBusDetails(bus, 'live-api')
+      busDetailsCache.set(busId, { data: mapped, expiresAt: Date.now() + BUS_DETAILS_CACHE_TTL_MS })
+      return mapped
+    } catch {
+      continue
+    }
   }
+
+  const fallbackBus = await loadBusByIdSnapshot(busId)
+  const mapped = mapBusDetails(fallbackBus, 'snapshot-fallback')
+  busDetailsCache.set(busId, { data: mapped, expiresAt: Date.now() + BUS_DETAILS_CACHE_TTL_MS })
+  return mapped
 }
 
-export async function loadAynaRouteFeatures(apiBaseUrl = DEFAULT_AYNA_API_BASE): Promise<LiveRouteResult> {
-  const sanitizedBase = sanitizeBaseUrl(apiBaseUrl)
+export async function loadAynaRouteFeatures(apiBaseUrl?: string): Promise<LiveRouteResult> {
+  for (const baseUrl of getApiBaseCandidates(apiBaseUrl)) {
+    const sanitizedBase = sanitizeBaseUrl(baseUrl)
+    try {
+      const busList = await getBusList(sanitizedBase)
+      const busIds = busList
+        .map((bus) => bus.id)
+        .filter((id): id is number => typeof id === 'number' && Number.isFinite(id))
+        .slice(0, 250)
 
-  try {
-    const busList = await getBusList(sanitizedBase)
-    const busIds = busList
-      .map((bus) => bus.id)
-      .filter((id): id is number => typeof id === 'number' && Number.isFinite(id))
-      .slice(0, 250)
+      if (busIds.length === 0) {
+        throw new Error('No bus ids in getBusList response')
+      }
 
-    if (busIds.length === 0) {
-      throw new Error('No bus ids in getBusList response')
+      const detailResponses = await getBusDetailsInBatches(sanitizedBase, busIds, 20)
+      const features = detailResponses
+        .filter((item): item is PromiseFulfilledResult<BusDetailResponse> => item.status === 'fulfilled')
+        .flatMap((item) => mapBusDetailToFeatures(item.value))
+
+      if (features.length === 0) {
+        throw new Error('No route coordinates in getBusById responses')
+      }
+
+      return {
+        features,
+        source: 'live-api',
+      }
+    } catch {
+      continue
     }
+  }
 
-    const detailResponses = await getBusDetailsInBatches(sanitizedBase, busIds, 20)
-    const features = detailResponses
-      .filter((item): item is PromiseFulfilledResult<BusDetailResponse> => item.status === 'fulfilled')
-      .flatMap((item) => mapBusDetailToFeatures(item.value))
-
-    if (features.length === 0) {
-      throw new Error('No route coordinates in getBusById responses')
-    }
-
-    return {
-      features,
-      source: 'live-api',
-    }
-  } catch {
-    const fallback = await loadSnapshotRouteFeatures()
-    return {
-      features: fallback,
-      source: 'snapshot-fallback',
-    }
+  const fallback = await loadSnapshotRouteFeatures()
+  return {
+    features: fallback,
+    source: 'snapshot-fallback',
   }
 }
 
@@ -355,6 +373,14 @@ function sanitizeBaseUrl(baseUrl: string): string {
     return DEFAULT_AYNA_API_BASE
   }
   return value.endsWith('/') ? value.slice(0, -1) : value
+}
+
+function getApiBaseCandidates(baseUrl?: string): string[] {
+  if (typeof baseUrl === 'string' && baseUrl.trim().length > 0) {
+    return [baseUrl]
+  }
+
+  return ['/ayna-api', DEFAULT_AYNA_API_BASE]
 }
 
 function normalizeRoutePayload(payload: unknown): RouteFeature[] {

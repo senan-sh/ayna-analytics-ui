@@ -4,7 +4,7 @@ type Dictionary = Record<string, string>
 
 export const TRANSLATIONS: Record<LanguageCode, Dictionary> = {
   az: {
-    appTitle: 'AYNA Nəqliyyat Analitikası',
+    appTitle: 'AYNA Məlumat Vizualizasiya İnterfeysi',
     appSubtitle: 'Demoqrafiya, sərnişin analitikası və canlı marşrut izləmə',
     regionChip: 'Bakı Regionu',
     tabDemographics: 'Demoqrafiya',
@@ -58,7 +58,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dictionary> = {
     duration: 'Müddət',
   },
   en: {
-    appTitle: 'AYNA Transit Intelligence',
+    appTitle: 'AYNA Data Visualization Interface',
     appSubtitle: 'Demographics, ridership analytics, and live route monitoring',
     regionChip: 'Baku Region',
     tabDemographics: 'Demographics',
@@ -112,7 +112,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dictionary> = {
     duration: 'Duration',
   },
   ru: {
-    appTitle: 'AYNA Транспортная Аналитика',
+    appTitle: 'AYNA Интерфейс Визуализации Данных',
     appSubtitle: 'Демография, аналитика пассажиропотока и онлайн-маршруты',
     regionChip: 'Регион Баку',
     tabDemographics: 'Демография',
