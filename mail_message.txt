@@ -1,0 +1,40 @@
+Dear Sanan,
+
+I hope this email finds you well.
+As we discussed, I am reaching out to provide the specific requirements for the UI you will be building. The interface should consist of 3 distinct pages, each focused on a different data visualization task.
+The UI should be structured as follows:
+       1. Regional Demographics Map
+       Data Source: zone_attributes_synthetic.gpkg
+
+Functionality: Display "population" and "jobs" data.
+
+Requirements: Users should be able to toggle between "Micro", "Meso", and "Macro" regions. Please ensure the use of intuitive and aesthetically pleasing color scales to represent the density and distribution of the data.
+ 
+
+       2. Bus Registration & Volume Analytics
+       Data Source: ceck_in_buss.csv
+
+Functionality: Display structured tables for bus registrations and transit volumes.
+
+Requirements: The tables should be easy to navigate, with sorting or filtering capabilities if possible.
+ 
+
+       3. Live Route Visualization
+       Data Source: Web scraping from "https://map.ayna.gov.az"
+
+Functionality: Visualize active bus routes on an interactive map.
+
+Requirements: The routes should be clearly overlaid on the map.
+---
+Please share with us the link to the hosted website.
+
+Send the results to hr@ayna.gov.az  by 23:59 on February 16.
+
+If you have any questions regarding the datasets or the technical requirements, please don't hesitate to ask from tarlan.cabiyev@ayna.gov.az 
+
+Good luck with the development.
+ 
+ Hörmətlə,
+
+İnsan resursları departamenti.
+

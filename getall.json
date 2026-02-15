@@ -1,0 +1,50 @@
+[
+    {
+        "id": 1,
+        "longitude": "49.961721",
+        "latitude": "40.43885",
+        "isTransportHub": false
+    },
+    {
+        "id": 2,
+        "longitude": "49.986932",
+        "latitude": "40.430938",
+        "isTransportHub": false
+    },
+    {
+        "id": 3,
+        "longitude": "49.957432",
+        "latitude": "40.375795",
+        "isTransportHub": false
+    },
+    {
+        "id": 4,
+        "longitude": "49.954147",
+        "latitude": "40.385486",
+        "isTransportHub": false
+    },
+    {
+        "id": 5,
+        "longitude": "49.806306",
+        "latitude": "40.404476",
+        "isTransportHub": false
+    },
+    {
+        "id": 6,
+        "longitude": "49.854312",
+        "latitude": "40.401175",
+        "isTransportHub": false
+    },
+    {
+        "id": 7,
+        "longitude": "50.125755",
+        "latitude": "40.483859",
+        "isTransportHub": false
+    },
+    {
+        "id": 8,
+        "longitude": "50.126998",
+        "latitude": "40.484046",
+        "isTransportHub": false
+    }
+]
