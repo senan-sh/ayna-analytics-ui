@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Alert, Box, Card, CardContent, Grid, Paper, Stack, Typography } from '@mui/material'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { Alert, Box, Card, CardContent, Grid, Paper, Skeleton, Stack, Typography } from '@mui/material'
 import { DataGrid, type GridColDef, type GridLocaleText } from '@mui/x-data-grid'
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useLanguage } from '../i18n/useLanguage'
 import { loadBusCsv } from '../services/dataService'
 import type { CsvRecord } from '../types/data'
 
 type AnalyticsRow = CsvRecord & { id: number }
+
+const BusAnalyticsCharts = lazy(() => import('../components/BusAnalyticsCharts'))
 
 export default function BusAnalytics() {
   const { t, language } = useLanguage()
@@ -236,98 +237,32 @@ export default function BusAnalytics() {
       )}
 
       {viewMode === 'charts' && (
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <Paper className="page-panel" elevation={0}>
-              <Typography variant="subtitle2" gutterBottom>
-                {t('hourlyPassengerVolume')}
-              </Typography>
-              <Box className="chart-shell">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={chartData.hourly} margin={{ top: 8, right: 8, left: -16, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#dbe7ff" />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value) => formatTooltipValue(value)} />
-                    <Bar dataKey="value" fill="#2970ff" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <Paper className="page-panel" elevation={0}>
-              <Typography variant="subtitle2" gutterBottom>
-                {t('topRoutesByCount')}
-              </Typography>
-              <Box className="chart-shell">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={chartData.topRoutes} layout="vertical" margin={{ top: 4, right: 12, left: 12, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#dbe7ff" />
-                    <XAxis type="number" tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="label" width={44} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value) => formatTooltipValue(value)} />
-                    <Bar dataKey="value" fill="#155eef" radius={[0, 6, 6, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <Paper className="page-panel" elevation={0}>
-              <Typography variant="subtitle2" gutterBottom>
-                {t('operatorContribution')}
-              </Typography>
-              <Box className="chart-shell">
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={chartData.operatorSplit}
-                      dataKey="value"
-                      nameKey="label"
-                      outerRadius={88}
-                      innerRadius={52}
-                      paddingAngle={2}
-                    >
-                      {chartData.operatorSplit.map((entry, index) => (
-                        <Cell key={entry.label} fill={OPERATOR_COLORS[index % OPERATOR_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Legend verticalAlign="bottom" height={40} />
-                    <Tooltip formatter={(value) => formatTooltipValue(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <Paper className="page-panel" elevation={0}>
-              <Typography variant="subtitle2" gutterBottom>
-                {t('paymentMix')}
-              </Typography>
-              <Box className="chart-shell">
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie data={chartData.paymentMix} dataKey="value" nameKey="label" outerRadius={88} innerRadius={52}>
-                      {chartData.paymentMix.map((entry, index) => (
-                        <Cell key={entry.label} fill={PAYMENT_COLORS[index % PAYMENT_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Legend verticalAlign="bottom" height={40} />
-                    <Tooltip formatter={(value) => formatTooltipValue(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+        <Suspense
+          fallback={
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, lg: 6 }}>
+                <Skeleton variant="rounded" height={320} animation="wave" />
+              </Grid>
+              <Grid size={{ xs: 12, lg: 6 }}>
+                <Skeleton variant="rounded" height={320} animation="wave" />
+              </Grid>
+            </Grid>
+          }
+        >
+          <BusAnalyticsCharts
+            chartData={chartData}
+            labels={{
+              hourlyPassengerVolume: t('hourlyPassengerVolume'),
+              topRoutesByCount: t('topRoutesByCount'),
+              operatorContribution: t('operatorContribution'),
+              paymentMix: t('paymentMix'),
+            }}
+          />
+        </Suspense>
       )}
     </Stack>
   )
 }
-
-const OPERATOR_COLORS = ['#2970ff', '#155eef', '#2e90fa', '#175cd3', '#53b1fd', '#7a5af8']
-const PAYMENT_COLORS = ['#2970ff', '#2e90fa']
 
 function getColumnKeys(records: CsvRecord[]): string[] {
   const keys = new Set<string>()
@@ -460,11 +395,6 @@ function asNumber(value: unknown): number {
     return Number.isFinite(parsed) ? parsed : 0
   }
   return 0
-}
-
-function formatTooltipValue(value: unknown): string {
-  const parsed = asNumber(value)
-  return parsed.toLocaleString()
 }
 
 function getGridLocaleText(language: 'az' | 'en' | 'ru'): Partial<GridLocaleText> {

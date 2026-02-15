@@ -10,6 +10,11 @@ const DEFAULT_AYNA_API_BASE = 'https://map-api.ayna.gov.az'
 const BUS_LIST_SNAPSHOT_PATH = '/getBusList.json'
 const BUS_BY_ID_SNAPSHOT_PATH = '/example-getBusById-response.json'
 const REQUEST_TIMEOUT_MS = 12000
+const BUS_LIST_CACHE_TTL_MS = 5 * 60 * 1000
+const BUS_DETAILS_CACHE_TTL_MS = 90 * 1000
+
+let busListCache: { data: AynaBusSummary[]; expiresAt: number } | null = null
+const busDetailsCache = new Map<number, { data: AynaBusDetails; expiresAt: number }>()
 
 export async function loadRegionsGeoJson(): Promise<RegionsGeoJson> {
   const response = await fetch(REGIONS_DATA_PATH)
@@ -73,6 +78,13 @@ export type AynaBusDetails = {
 }
 
 export async function loadAynaBusList(apiBaseUrl = DEFAULT_AYNA_API_BASE): Promise<{ buses: AynaBusSummary[]; source: 'live-api' | 'snapshot-fallback' }> {
+  if (busListCache && busListCache.expiresAt > Date.now()) {
+    return {
+      buses: busListCache.data,
+      source: 'live-api',
+    }
+  }
+
   const sanitizedBase = sanitizeBaseUrl(apiBaseUrl)
 
   try {
@@ -83,6 +95,11 @@ export async function loadAynaBusList(apiBaseUrl = DEFAULT_AYNA_API_BASE): Promi
         id: item.id,
         number: typeof item.number === 'string' && item.number.trim().length > 0 ? item.number : String(item.id),
       }))
+
+    busListCache = {
+      data: buses,
+      expiresAt: Date.now() + BUS_LIST_CACHE_TTL_MS,
+    }
 
     return {
       buses,
@@ -101,14 +118,23 @@ export async function loadAynaBusDetails(
   busId: number,
   apiBaseUrl = DEFAULT_AYNA_API_BASE,
 ): Promise<AynaBusDetails> {
+  const cached = busDetailsCache.get(busId)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data
+  }
+
   const sanitizedBase = sanitizeBaseUrl(apiBaseUrl)
 
   try {
     const bus = await getBusById(sanitizedBase, busId)
-    return mapBusDetails(bus, 'live-api')
+    const mapped = mapBusDetails(bus, 'live-api')
+    busDetailsCache.set(busId, { data: mapped, expiresAt: Date.now() + BUS_DETAILS_CACHE_TTL_MS })
+    return mapped
   } catch {
     const fallbackBus = await loadBusByIdSnapshot(busId)
-    return mapBusDetails(fallbackBus, 'snapshot-fallback')
+    const mapped = mapBusDetails(fallbackBus, 'snapshot-fallback')
+    busDetailsCache.set(busId, { data: mapped, expiresAt: Date.now() + BUS_DETAILS_CACHE_TTL_MS })
+    return mapped
   }
 }
 

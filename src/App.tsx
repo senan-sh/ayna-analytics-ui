@@ -1,12 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import {
-  AltRouteOutlined,
-  MapOutlined,
-  TableChartOutlined,
-} from '@mui/icons-material'
-import {
   Box,
-  CircularProgress,
   Container,
   CssBaseline,
   Divider,
@@ -21,6 +15,7 @@ import {
   createTheme,
 } from '@mui/material'
 import './App.css'
+import AppLoader from './components/AppLoader'
 import { useLanguage } from './i18n/useLanguage'
 import type { LanguageCode } from './i18n/translations'
 
@@ -29,6 +24,10 @@ const BusAnalyticsPage = lazy(() => import('./pages/BusAnalytics'))
 const LiveRoutesPage = lazy(() => import('./pages/LiveRoutes'))
 
 type PageKey = 'demographics' | 'analytics' | 'routes'
+
+function NoSelectIcon() {
+  return null
+}
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>('demographics')
@@ -41,10 +40,10 @@ export default function App() {
     routes: t('pageRoutes'),
   }
 
-  const navItems: Array<{ key: PageKey; label: string; icon: typeof MapOutlined }> = [
-    { key: 'demographics', label: t('tabDemographics'), icon: MapOutlined },
-    { key: 'analytics', label: t('tabAnalytics'), icon: TableChartOutlined },
-    { key: 'routes', label: t('tabRoutes'), icon: AltRouteOutlined },
+  const navItems: Array<{ key: PageKey; label: string; icon: string }> = [
+    { key: 'demographics', label: t('tabDemographics'), icon: '🗺️' },
+    { key: 'analytics', label: t('tabAnalytics'), icon: '📊' },
+    { key: 'routes', label: t('tabRoutes'), icon: '🛣️' },
   ]
 
   const theme = useMemo(
@@ -103,9 +102,7 @@ export default function App() {
         <Box className={`layout-root ${sidebarCollapsed ? 'layout-root-collapsed' : ''}`}>
           <Box component="aside" className={`sidebar-shell ${sidebarCollapsed ? 'sidebar-shell-collapsed' : ''}`}>
             <Box className="sidebar-top-row">
-              <Typography variant="body2" className="sidebar-label">
-                {sidebarCollapsed ? '' : 'Navigation'}
-              </Typography>
+              <Typography />
               <Box
                 component="button"
                 type="button"
@@ -117,9 +114,15 @@ export default function App() {
             </Box>
 
             <Box>
-              <Typography variant="h5" component="h1" className="brand-title">
-                {sidebarCollapsed ? 'AYNA' : t('appTitle')}
-              </Typography>
+              {sidebarCollapsed ? (
+                <Box className="sidebar-brand-icon-wrap">
+                  <img src="/ayna-only-icon.svg" alt="AYNA" className="sidebar-brand-icon" />
+                </Box>
+              ) : (
+                <Typography variant="h5" component="h1" className="brand-title">
+                  {t('appTitle')}
+                </Typography>
+              )}
               <Typography variant="body2" className={`brand-subtitle ${sidebarCollapsed ? 'hidden-when-collapsed' : ''}`}>
                 {t('appSubtitle')}
               </Typography>
@@ -130,6 +133,7 @@ export default function App() {
               value={language}
               onChange={(event) => setLanguage(event.target.value as LanguageCode)}
               className={`language-select ${sidebarCollapsed ? 'language-select-collapsed' : ''}`}
+              IconComponent={sidebarCollapsed ? NoSelectIcon : undefined}
               MenuProps={{
                 PaperProps: {
                   sx: {
@@ -139,9 +143,15 @@ export default function App() {
                 },
               }}
             >
-              <MenuItem value="az">{sidebarCollapsed ? '🇦🇿' : '🇦🇿 Azerbaijani'}</MenuItem>
-              <MenuItem value="en">{sidebarCollapsed ? '🇬🇧' : '🇬🇧 English'}</MenuItem>
-              <MenuItem value="ru">{sidebarCollapsed ? '🇷🇺' : '🇷🇺 Russian'}</MenuItem>
+              <MenuItem value="az" className={sidebarCollapsed ? 'language-menu-item-collapsed' : ''}>
+                {sidebarCollapsed ? '🇦🇿' : '🇦🇿 Azerbaijani'}
+              </MenuItem>
+              <MenuItem value="en" className={sidebarCollapsed ? 'language-menu-item-collapsed' : ''}>
+                {sidebarCollapsed ? '🇬🇧' : '🇬🇧 English'}
+              </MenuItem>
+              <MenuItem value="ru" className={sidebarCollapsed ? 'language-menu-item-collapsed' : ''}>
+                {sidebarCollapsed ? '🇷🇺' : '🇷🇺 Russian'}
+              </MenuItem>
             </Select>
 
             <Divider className="sidebar-divider" />
@@ -155,7 +165,7 @@ export default function App() {
                   className={`sidebar-nav-item ${sidebarCollapsed ? 'sidebar-nav-item-collapsed' : ''}`}
                 >
                   <ListItemIcon className="sidebar-nav-icon">
-                    <item.icon fontSize="small" />
+                    <span>{item.icon}</span>
                   </ListItemIcon>
                   {!sidebarCollapsed && <ListItemText primary={item.label} />}
                 </ListItemButton>
@@ -173,9 +183,7 @@ export default function App() {
               </Typography>
               <Suspense
                 fallback={
-                  <Box className="loading-state">
-                    <CircularProgress size={36} />
-                  </Box>
+                  <AppLoader />
                 }
               >
                 <Box key={activePage} className="page-transition">

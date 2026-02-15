@@ -13,6 +13,7 @@ export default function LiveRoutes() {
   const { t } = useLanguage()
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [busSearch, setBusSearch] = useState('')
+  const [debouncedBusSearch, setDebouncedBusSearch] = useState('')
   const [loadingList, setLoadingList] = useState(true)
   const [loadingBus, setLoadingBus] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +83,14 @@ export default function LiveRoutes() {
   }, [selectedBusId, loadSingleBus])
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedBusSearch(busSearch)
+    }, 220)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [busSearch])
+
+  useEffect(() => {
     if (!autoRefresh || selectedBusId === null) {
       return
     }
@@ -94,12 +103,12 @@ export default function LiveRoutes() {
   }, [autoRefresh, selectedBusId, loadSingleBus])
 
   const filteredBuses = useMemo(() => {
-    const query = busSearch.trim().toLowerCase()
+    const query = debouncedBusSearch.trim().toLowerCase()
     if (!query) {
       return buses
     }
     return buses.filter((bus) => bus.number.toLowerCase().includes(query))
-  }, [buses, busSearch])
+  }, [buses, debouncedBusSearch])
 
   const renderedRoutes = useMemo(
     () =>
