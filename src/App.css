@@ -314,6 +314,24 @@
   animation: revealUp 320ms ease both;
 }
 
+.map-canvas:focus,
+.map-canvas:focus-visible,
+.map-canvas.leaflet-container:focus,
+.map-canvas.leaflet-container:focus-visible {
+  outline: none;
+}
+
+.map-canvas .leaflet-interactive:focus,
+.map-canvas .leaflet-interactive:focus-visible,
+.map-canvas canvas:focus,
+.map-canvas canvas:focus-visible,
+.map-canvas svg:focus,
+.map-canvas svg:focus-visible,
+.map-canvas path:focus,
+.map-canvas path:focus-visible {
+  outline: none;
+}
+
 .legend-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

@@ -258,6 +258,7 @@ export default function LiveRoutes() {
             zoom={11}
             scrollWheelZoom={!isMobile}
             zoomControl={!isMobile}
+            attributionControl={false}
             className="map-canvas"
             ref={mapRef}
           >

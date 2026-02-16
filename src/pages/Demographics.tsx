@@ -257,6 +257,7 @@ export default function Demographics() {
             center={MAP_CENTER}
             zoom={11}
             scrollWheelZoom
+            attributionControl={false}
             className="map-canvas"
             ref={mapRef}
           >
